@@ -2,7 +2,9 @@
 title: "How income varies across different categories of college majors"
 author: "Jonathan Sinclair"
 date: "07/04/2021"
-output: html_document
+output:
+    html_document:
+      keep_md: true 
 editor_options: 
   chunk_output_type: console
 ---
