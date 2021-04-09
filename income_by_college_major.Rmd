@@ -1,0 +1,206 @@
+---
+title: "How income varies across different categories of college majors"
+author: "Jonathan Sinclair"
+date: "07/04/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+
+<br/><br/><br/><br/>
+
+
+##### 0 - Load Libraries
+
+
+```{r}
+devtools::install_github("jhudsl/collegeIncome")
+devtools::install_github("jhudsl/matahari")
+
+```
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+library(collegeIncome)
+library(matahari)
+dance_start(value = FALSE,
+            contents = FALSE)
+dance_save("~/Desktop/college_major_analysis.rds")
+```
+
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(GGally)
+```
+
+<br/><br/><br/><br/>
+
+
+
+
+
+##### 1 - Load Data
+```{r}
+data(college)
+```
+
+<br/><br/><br/><br/>
+
+
+
+
+
+##### 2 - Descriptive Statistics
+```{r}
+dim(college)
+glimpse(college)
+```
+
+**How many majors / major categories do we have?**
+
+```{r}
+college %>% select(major) %>% n_distinct()
+college %>% select(major_category) %>% n_distinct()
+
+sort(table(college$major_category))
+```
+
+We can see that we have
+
+* 173 Majors
+* 15 Major Categories
+  * which range from having 1, to 29 participants
+
+
+```{r}
+#look at the average median incomes by major_category
+average_median_incomes <- college %>%
+  select(major_category, median) %>%
+  group_by(major_category) %>%
+  summarise(median_mean = mean(median, na.rm = TRUE)) %>%
+  arrange(desc(median_mean))
+
+average_median_incomes
+```
+
+We can see by looking at the average of median incomes (by major category) that higher median incomes are associated with
+
+1. Business
+2. Biology & Life Science
+3. Agriculture & Natural resources
+
+<br/><br/><br/><br/>
+
+
+
+
+
+##### 3 - EDA
+
+We will now use a box-plot to look at the distribution of of incomes for each major_category
+
+```{r}
+g <- ggplot(college, aes(x=major_category,
+                         y=median / 1000,
+                         color = major_category))
+g <- g + geom_boxplot()
+g <- g + coord_flip()
+g <- g + ylab("Median income (Thousands of dollars)")
+g <- g + xlab("Major Category")
+g <- g + theme(legend.position = "none")
+g
+```
+
+The distribution of median incomes doesn't show any discernable pattern. But we can see that **Business** appears to be highest overall.
+
+<br/><br/><br/><br/>
+
+
+
+
+
+##### 4 - Modelling
+
+Here, we generate a Regression Model, with `major category` regressed
+
+```{r}
+fit <- lm(median ~ major_category, data=college)
+round(summary(fit)$coef, 2)
+```
+
+The model which regresses median income onto major categories, is showing *Agriculture & Natural Resources* as an intercept (our referenced major category). 
+
+The other coefficients show the difference of the mean from that category, to our reference category. 
+
+The p-value of the coefficients is the probability of a t-test where the mean of each coefficient is compared with the mean of the reference variable.
+
+**Model Interpretation**
+
+* Mean of median income for students of *Argriculture & Natural Resources* $43,500
+* Difference in means (of median income) between *Argiculture & Natrual Resources* and *Business* is $5,653.85.
+  * This is the highest largest mean difference of all major categories.
+  
+
+**Checking Model validity**
+
+```{r}
+par(mfrow=c(2,2))
+plot(fit)
+```
+
+These diagnostic plots do not reveal any worrying patterns within the residuals, and the data seems nearly normal.
+
+
+**Comparison of the "Business" variable**
+
+```{r}
+business_college <- relevel(as.factor(college$major_category), "Business")
+fit2 <- lm(median ~ business_college, college)
+round(summary(fit2)$coef, 2)
+```
+
+When we compare the `major_category` Business to the other categories, we see a clear difference with some other categories. For example
+* Arts
+* Computers & Mathematics
+* Education
+* Engineering
+* Humanities & Liberal Arts
+* Science
+all have negative coefficients, with significantly small p-values (p<0.05)
+
+<br/><br/><br/><br/>
+
+
+
+
+
+##### Conclusion
+
+This analysis looked at the question of whether there was any difference in income, based on college major.
+
+In order to answer this question, we looked at `median` income, by `major category`.
+
+**Null Hypothesis**
+
+We began with the assumption of *no difference* in income between the major categories. 
+
+The alternative hypothesis, is that there was a difference in mean income between the categories. 
+
+
+Our regression models show that in general, there is no significant difference in income across major categories. 
+
+We do see **Business** as significantly higher than some other categories, including *Arts, Computers & Mathematics, Education, Engineering, Humanities & Liberal Arts, and Social Science*.
+
+Further analysis would be required to validate and verify if this is a real difference, or just due to chance.
